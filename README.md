@@ -1,7 +1,21 @@
-# Machine Learning
+# Data Mining, Scalable Machine Learning and Deep Learning projects
 - Riccardo Sibani 
 - Filippo Boiani
 - Piotr Mrowczynski
+
+## Data mining
+
+### Wordcount
+
+Use it as template for other apps
+
+### Finding similar items
+
+Finding textually similar documents based on Jaccard similarity using the shingling,
+minhashing, and locality-sensitive hashing (LSH) techniques and corresponding algorithms.
+
+
+Use it as template for other apps
 
 ## Decision trees
 
@@ -130,7 +144,7 @@ We also evaluated the effect pruning has on the test error for the monk1 and mon
 
 We define the optimal partition into training and validation set.
 
-![PLOT](https://github.com/filippoboiani/machine-learning/blob/master/plot.png "Fraction and Errors")
+![PLOT](https://github.com/filippoboiani/machine-learning/blob/master/dectrees/plot.png "Fraction and Errors")
 
 Values | 0.3 | 0.4 | 0.5 | 0.6 | 0.7 | 0.8 
 --- | --- | --- | --- | --- | --- | --- 
