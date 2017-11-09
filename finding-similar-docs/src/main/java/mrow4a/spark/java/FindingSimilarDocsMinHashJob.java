@@ -62,11 +62,6 @@ public final class FindingSimilarDocsMinHashJob {
         Integer shingleLengthEmail = 5;
 
         /*
-         * Set similarity for email to 0.1, which should indicate if responses or similar topic
-         */
-        Double similarityThresholdEmail = 0.3;
-
-        /*
          * Create shingles unique list
          */
         JavaPairRDD<String, Collection<Integer>> shingles = jsc
@@ -89,15 +84,57 @@ public final class FindingSimilarDocsMinHashJob {
                         Shingling.getShingles(filenameContentsPair._2, shingleLengthEmail)) // shingles of contents
                 );
 
-        JavaRDD<Tuple2<String,Vector>> minHash = new MinHash().fit(shingles, 10);
-        for (Tuple2<String,Vector> tuple : minHash.collect()) {
+        /*
+         * Set shingle length to 5 as it is good for emails
+         */
+        Integer signatureLength = 10;
+        JavaRDD<Tuple2<String, Collection<Integer>>> minHashSignatures = new MinHash(signatureLength)
+                .getSignatures(shingles)
+                /*
+                 * Cache, otherwise we will end up with MapReduce like behaviour
+                */
+                .cache();
+
+
+        /*
+         * Set similarity for email to 0.1, which should indicate if responses or similar topic
+         */
+        Double similarityThresholdEmail = 0.2;
+        JavaPairRDD<Tuple2<String, Collection<Integer>>, Tuple2<String, Collection<Integer>>> uniqueFileShinglesPairs = minHashSignatures
+                /*
+                 * Combine each file with each file for similarity comparison
+                 */
+                .cartesian(minHashSignatures)
+                /*
+                 * Ensure uniqueness of pairs
+                 */
+                .filter(setsPair -> setsPair._1._1.hashCode() < setsPair._2._1.hashCode())
+                .cache();
+
+
+        JavaPairRDD<Tuple2<String, String>, Float> similarities = uniqueFileShinglesPairs
+                /*
+                 * Compute similarity
+                 */
+                .mapToPair(setsPair -> new Tuple2<>(
+                        new Tuple2<>(setsPair._1._1, setsPair._2._1), // filename-filename pair
+                        JaccardSimilarity.compute(setsPair._1._2, setsPair._2._2)
+                ))
+                .filter(filesSimilarityPair -> filesSimilarityPair._2 > similarityThresholdEmail)
+                .cache();
+
+        long countSim = similarities.count();
+        long countUniqPairs = uniqueFileShinglesPairs.count();
+        for (Tuple2<Tuple2<String, String>,Float> tuple : similarities.collect()) {
             System.out.println(tuple._1() + ": " + tuple._2().toString());
             //System.out.println(tuple.toString());
         }
         Instant end = Instant.now();
         System.out.println("Time: "+
                 Duration.between(start, end).toMillis() +" milliseconds");
-
+        System.out.println("Found similar document pairs ["+
+                countSim + "/" + countUniqPairs + "] with similarity threshold [" + similarityThresholdEmail
+                + "] and shingle lenght [" + shingleLengthEmail + "] and signature lenght [" + signatureLength + "]");
         spark.stop();
     }
 }

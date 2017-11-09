@@ -5,31 +5,27 @@ import org.apache.spark.api.java.JavaRDD;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import mrow4a.spark.java.alg.HashFunction;
+import java.util.Vector;
+
 import org.apache.spark.api.java.function.Function;
-import org.apache.spark.mllib.linalg.Vector;
-import org.scalactic.Bool;
 import scala.Tuple2;
 import org.apache.spark.mllib.linalg.SparseVector;
 import org.apache.spark.mllib.linalg.Vectors;
-import scala.collection.Seq;
 
 public class MinHash {
 
-    private List<HashFunction> hashFuncions;
+    private final int signatureLength;
 
-    public MinHash() {}
+    public MinHash(int signatureLength) {
+        this.signatureLength = signatureLength;
+    }
 
-    public JavaRDD<Tuple2<String,Vector>> fit(JavaPairRDD<String, Collection<Integer>> _setIdShinglesPairs, int signatureLength) {
-        this.hashFuncions = new ArrayList<>();
-        for (int i = 0; i < signatureLength; i++) {
-            this.hashFuncions.add(new HashFunction());
-        }
+    public JavaRDD<Tuple2<String, Collection<Integer>>> getSignatures(JavaPairRDD<String, Collection<Integer>> _setIdShinglesPairs) {
+        Signature signature = new Signature(signatureLength);
 
-        JavaRDD<Tuple2<String,Vector>> setShinglesMatrix = _setIdShinglesPairs
-                .map((Function<Tuple2<String, Collection<Integer>>, Tuple2<String,Vector>>) shinglesMatrixPositions -> {
+        return _setIdShinglesPairs
+                .filter(shinglesMatrixPositions -> !shinglesMatrixPositions._2.isEmpty())
+                .map((Function<Tuple2<String, Collection<Integer>>, Tuple2<String,SparseVector>>) shinglesMatrixPositions -> {
                     // Assign positions in the matrix for this column
                     ArrayList<Tuple2<Integer, Double>> shinglesMatrixBools = new ArrayList<>();
                     for (Integer shinglesMatrixPosition : shinglesMatrixPositions._2) {
@@ -38,12 +34,23 @@ public class MinHash {
                                 1.0) // Mark as 1 for MinHash function
                         );
                     }
+
+                    return new Tuple2<>(
+                            shinglesMatrixPositions._1, // filename
+                            Vectors.sparse( // sparse shingles matrix
+                                    Integer.MAX_VALUE, // Max int artificial vector size is required since shingles can be any integer
+                                    shinglesMatrixBools // positions of shingles
+                            ).toSparse()
+                    );
+                })
+                .map((Function<Tuple2<String, SparseVector>, Tuple2<String,Collection<Integer>>>) shinglesMatrixPositions -> {
+                    // Assign positions in the matrix for this column
+                    int[] setShingles = shinglesMatrixPositions._2.indices();
+
                     return new Tuple2<>(
                             shinglesMatrixPositions._1,
-                            Vectors.sparse(Integer.MAX_VALUE, shinglesMatrixBools)
+                            signature.get(setShingles)
                     );
                 });
-
-        return setShinglesMatrix;
     }
 }
