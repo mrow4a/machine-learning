@@ -50,7 +50,9 @@ public final class FindingSimilarDocsMinHashJob {
         // multiple = /home/mrow4a/Projects/machine-learning/datasets/mini_newsgroups/*/**
         // single dir = /home/mrow4a/Projects/machine-learning/datasets/mini_newsgroups/alt.atheism/*
         if (args.length < 1) {
-            System.err.println("Usage: FindingSimilarDocsBasicJob <file>");
+            System.err.println();
+            System.err.println("Usage: FindingSimilarDocsMinHashJob <file>");
+            System.err.println();
             System.exit(1);
         }
 
@@ -85,10 +87,18 @@ public final class FindingSimilarDocsMinHashJob {
                 );
 
         /*
-         * Set shingle length to 5 as it is good for emails
+         * Set signature length to 10 and compute signatures using MinHash algorithm
          */
         Integer signatureLength = 10;
-        JavaRDD<Tuple2<String, Collection<Integer>>> minHashSignatures = new MinHash(signatureLength)
+
+        /*
+         * Instantiate MinHash
+         */
+        MinHash mh = new MinHash(signatureLength);
+        JavaRDD<Tuple2<String, Collection<Integer>>> minHashSignatures = mh
+                /*
+                 * Compute signatures using MinHash algorithm
+                 */
                 .getSignatures(shingles)
                 /*
                  * Cache, otherwise we will end up with MapReduce like behaviour
@@ -100,10 +110,11 @@ public final class FindingSimilarDocsMinHashJob {
          * Set similarity for email to 0.1, which should indicate if responses or similar topic
          */
         Double similarityThresholdEmail = 0.2;
+
+        /*
+         * Combine each file with each file for similarity comparison
+         */
         JavaPairRDD<Tuple2<String, Collection<Integer>>, Tuple2<String, Collection<Integer>>> uniqueFileShinglesPairs = minHashSignatures
-                /*
-                 * Combine each file with each file for similarity comparison
-                 */
                 .cartesian(minHashSignatures)
                 /*
                  * Ensure uniqueness of pairs
@@ -112,10 +123,10 @@ public final class FindingSimilarDocsMinHashJob {
                 .cache();
 
 
+        /*
+         * Compute Jaccard similarity of signatures
+         */
         JavaPairRDD<Tuple2<String, String>, Float> similarities = uniqueFileShinglesPairs
-                /*
-                 * Compute similarity
-                 */
                 .mapToPair(setsPair -> new Tuple2<>(
                         new Tuple2<>(setsPair._1._1, setsPair._2._1), // filename-filename pair
                         JaccardSimilarity.compute(setsPair._1._2, setsPair._2._2)
@@ -125,16 +136,26 @@ public final class FindingSimilarDocsMinHashJob {
 
         long countSim = similarities.count();
         long countUniqPairs = uniqueFileShinglesPairs.count();
+        Instant end = Instant.now();
+
+        /*
+         * Print pairs of similar documents and their similarity
+         */
+        System.err.println();
         for (Tuple2<Tuple2<String, String>,Float> tuple : similarities.collect()) {
             System.out.println(tuple._1() + ": " + tuple._2().toString());
             //System.out.println(tuple.toString());
         }
-        Instant end = Instant.now();
+        System.err.println();
+
+
         System.out.println("Time: "+
                 Duration.between(start, end).toMillis() +" milliseconds");
         System.out.println("Found similar document pairs ["+
                 countSim + "/" + countUniqPairs + "] with similarity threshold [" + similarityThresholdEmail
                 + "] and shingle lenght [" + shingleLengthEmail + "] and signature lenght [" + signatureLength + "]");
+        System.err.println();
+
         spark.stop();
     }
 }

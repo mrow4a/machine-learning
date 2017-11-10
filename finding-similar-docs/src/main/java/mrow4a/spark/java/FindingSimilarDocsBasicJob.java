@@ -49,7 +49,9 @@ public final class FindingSimilarDocsBasicJob {
         // multiple = /home/mrow4a/Projects/machine-learning/datasets/mini_newsgroups/*/**
         // single dir = /home/mrow4a/Projects/machine-learning/datasets/mini_newsgroups/alt.atheism/*
         if (args.length < 1) {
+            System.err.println();
             System.err.println("Usage: FindingSimilarDocsBasicJob <file>");
+            System.err.println();
             System.exit(1);
         }
 
@@ -115,16 +117,22 @@ public final class FindingSimilarDocsBasicJob {
 
         long countSim = similarities.count();
         long countUniqPairs = uniqueFileShinglesPairs.count();
+
+        System.err.println();
+
         for (Tuple2<Tuple2<String, String>, Float> tuple :  similarities.collect()) {
             System.out.println(tuple._1() + ": " + tuple._2());
         }
 
         Instant end = Instant.now();
+
+        System.err.println();
         System.out.println("Found similar document pairs ["+
                 countSim + "/" + countUniqPairs + "] with similarity threshold [" + similarityThresholdEmail
                 + "] and shingle lenght [" + shingleLengthEmail + "]");
         System.out.println("Time: "+
                 Duration.between(start, end).toMillis() +" milliseconds");
+        System.err.println();
 
         spark.stop();
     }

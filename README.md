@@ -12,10 +12,24 @@ Use it as template for other apps
 ### Finding similar items
 
 Finding textually similar documents based on Jaccard similarity using the shingling,
-minhashing, and locality-sensitive hashing (LSH) techniques and corresponding algorithms.
+minhashing, locality-sensitive hashing (LSH) techniques and corresponding algorithms.
 
+Building (Docker required for maven single assembly):
+```
+chmod +x finding-similar-docs/build.sh 
+chmod +x finding-similar-docs/run.sh 
+./finding-similar-docs/build.sh 
+```
 
-Use it as template for other apps
+Running basic version:
+```
+./finding-similar-docs/run.sh FindingSimilarDocsBasicJob 
+```
+
+Running MinHash version:
+```
+./finding-similar-docs/run.sh FindingSimilarDocsMinHashJob 
+```
 
 ## Decision trees
 

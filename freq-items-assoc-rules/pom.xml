@@ -5,10 +5,10 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>mrow4a.spark</groupId>
-  <artifactId>finding-similar-docs_2.11</artifactId>
+  <artifactId>freq-items-assoc-rules_2.11</artifactId>
   <version>0.0.1-SNAPSHOT</version>
 
-  <name>finding-similar-docs</name>
+  <name>freq-items-assoc-rules</name>
   <packaging>jar</packaging>
 
   <developers>
@@ -66,6 +66,8 @@
       <artifactId>spark-mllib_${scala.binary.version}</artifactId>
       <version>${spark.version}</version>
     </dependency>
+
+
   </dependencies>
 
   <build>
@@ -89,16 +91,6 @@
         <configuration>
           <source>1.8</source>
           <target>1.8</target>
-        </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <archive>
-          </archive>
-          <descriptorRefs>
-            <descriptorRef>jar-with-dependencies</descriptorRef>
-          </descriptorRefs>
         </configuration>
       </plugin>
     </plugins>
