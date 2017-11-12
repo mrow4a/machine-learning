@@ -28,8 +28,6 @@ object Main {
       println(sample)
     }
 
-    //Step1: print the first 5 rows, what is the delimiter, number of features and the data types?
-
     //Step2: split each row into an array of features
     val recordsRdd = rdd.map(s => s.split(',').toVector)
 
@@ -45,6 +43,7 @@ object Main {
     val songsDf = songsRdd.toDF().cache()
     songsDf.createOrReplaceTempView("songs")
 
+    //Step5: Do some analysis
     songsDf.show(5)
     spark.sql("SELECT COUNT(*) FROM songs").show()
     spark.sql("SELECT MAX(year), MIN(year), AVG(year) FROM songs").show()
