@@ -46,8 +46,8 @@ public final class FindingSimilarDocsBasicJob {
                 .getOrCreate();
         JavaSparkContext jsc = JavaSparkContext.fromSparkContext(spark.sparkContext());
 
-        // multiple = /home/mrow4a/Projects/machine-learning/datasets/mini_newsgroups/*/**
-        // single dir = /home/mrow4a/Projects/machine-learning/datasets/mini_newsgroups/alt.atheism/*
+        // multiple = /home/mrow4a/Projects/machine-learning/finding-similar-docs/datasets/mini_newsgroups/*/**
+        // single dir = /home/mrow4a/Projects/machine-learning/finding-similar-docs/datasets/mini_newsgroups/alt.atheism/*
         if (args.length < 1) {
             System.err.println();
             System.err.println("Usage: FindingSimilarDocsBasicJob <file>");
