@@ -57,7 +57,9 @@ object Main {
 
 
     //Step6: shift all labels by the value of minimum label such that the value of the smallest becomes 0 (use our DoubleUDF)
+
     // v2d.select(min(v2d.columns.apply(4))).show()
+    // Min year also has been determined in task1
     val lShifter = new DoubleUDF(vector => vector - 1922.0)
       .setInputCol("rawyear")
       .setOutputCol("year")
