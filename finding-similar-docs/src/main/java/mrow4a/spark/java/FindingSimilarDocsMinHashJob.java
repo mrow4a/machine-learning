@@ -89,7 +89,7 @@ public final class FindingSimilarDocsMinHashJob {
         /*
          * Set signature length to 10 and compute signatures using MinHash algorithm
          */
-        Integer signatureLength = 10;
+        Integer signatureLength = 100;
 
         /*
          * Instantiate MinHash

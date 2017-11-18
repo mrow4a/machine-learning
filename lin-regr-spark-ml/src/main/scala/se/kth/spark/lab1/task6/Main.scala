@@ -15,7 +15,7 @@ object Main {
     import sqlContext.implicits._
     import sqlContext._
 
-    val filePath = "src/main/resources/millionsong.txt"
+    val filePath = "src/main/resources/million-song.txt"
     val obsDF: DataFrame = ???
 
     val myLR = ???

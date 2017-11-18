@@ -5,5 +5,5 @@
 .settings/
 project/
 target/
-spark.log
+spark.log*
 .idea/

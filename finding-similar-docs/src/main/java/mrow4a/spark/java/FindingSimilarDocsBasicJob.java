@@ -37,7 +37,7 @@ public final class FindingSimilarDocsBasicJob {
 
     public static void main(String[] args) throws Exception {
         SparkConf conf = new SparkConf()
-                .setAppName("JavaPrefixSpanExample")
+                .setAppName("FindingSimilarDocsBasicJob")
                 .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
                 .setMaster("local[*]").set("spark.executor.memory", "1g");
         SparkSession spark = SparkSession

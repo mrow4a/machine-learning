@@ -17,9 +17,14 @@ public final class Shingling {
      */
     public static Collection<Integer> getShingles(String text, Integer shingleLength) {
         HashSet<Integer> shingles = new HashSet<>();
+
+        // Convert the text to char array
         char[] charArray = text.toCharArray();
+
+        // Implement sliding window over chars
         for (int i = 0; i < charArray.length - shingleLength; i++) {
             // Use hash code and absolute value to be sure of positive integers
+            // Construct string of length shingleLenght starting from offset i, out of whole text
             shingles.add(abs((new String(charArray, i, shingleLength)).hashCode()));
         }
         return shingles;

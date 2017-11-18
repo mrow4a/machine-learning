@@ -22,16 +22,19 @@ object Main {
 
     import spark.implicits._
 
-    val filePath = "src/main/resources/millionsong.txt"
+    val filePath = "src/main/resources/million-song.txt"
 
     // Split data into training and testing
     val songsDf = spark.sparkContext.textFile(filePath)
-      .toDF("record").randomSplit(Array(0.7, 0.3))
-    val training: DataFrame = songsDf(0).cache()
-    val test: DataFrame = songsDf(1).cache()
-    val numTraining = training.count()
-    val numTest = test.count()
-    println(s"Training: $numTraining, test: $numTest.")
+      // Remove all " chars
+      .map(record => record.replace("\"", ""))
+      .toDF("record")
+      .cache()
+    //      .randomSplit(Array(0.9, 0.1))
+    //    val training: DataFrame = songsDf(0).cache()
+    //    val test: DataFrame = songsDf(1).cache()
+    val numSongs = songsDf.count()
+    println(s"Songs: $numSongs")
 
     // Pre-process data (pipeline)
     val regexTokenizer = new RegexTokenizer()
@@ -49,9 +52,6 @@ object Main {
       .setIndices(Array(0))
     val v2d = new Vector2DoubleUDF(year => year.apply(0))
       .setInputCol("year_vector")
-      .setOutputCol("year")
-    val lShifter = new DoubleUDF(vector => vector - 1922.0)
-      .setInputCol("year")
       .setOutputCol("label")
 
     // Prepare features (pipeline)
@@ -60,52 +60,42 @@ object Main {
       .setOutputCol("features")
       .setIndices(Array(1,2,3))
 
-    val params = Seq(
-      (10,0.1,0.1),
-      (10,0.9,0.1),
-      (50,0.1,0.1),
-      (50,0.9,0.1)
-    )
+    // prepare linear regression
+    val maxIter = 10
+    val regParam = 0.1
+    val elNet = 0.1
 
-    for (param <- params) {
-      // prepare linear regression
-      val maxIter = param._1
-      val regParam = param._2
-      val elNet = param._3
+    val learningAlg = new LinearRegression()
+      .setMaxIter(maxIter)
+      .setRegParam(regParam)
+      .setElasticNetParam(elNet)
+      .setLabelCol("label")
+      .setFeaturesCol("features")
 
-      val learningAlg = new LinearRegression()
-        .setMaxIter(maxIter)
-        .setRegParam(regParam)
-        .setElasticNetParam(elNet)
-        .setLabelCol("label")
-        .setFeaturesCol("features")
+    // Construct linear regression training pipeline
+    val lrPipeline = new Pipeline()
+      .setStages(Array(
+        regexTokenizer,
+        arr2Vect,
+        lSlicer,
+        v2d,
+        fSlicer,
+        learningAlg))
 
-      // Construct linear regression training pipeline
-      val lrPipeline = new Pipeline()
-        .setStages(Array(
-          regexTokenizer,
-          arr2Vect,
-          lSlicer,
-          v2d,
-          lShifter,
-          fSlicer,
-          learningAlg))
+    // Train Linear Regression Model on training data
+    val lrModel: PipelineModel = lrPipeline.fit(songsDf)
 
-      // Train Linear Regression Model on training data
-      val lrModel: PipelineModel = lrPipeline.fit(training)
+    // Get predictions for test data
+    lrModel.transform(songsDf)
+      .select("label", "features", "prediction")
+      .show(5)
 
-      // Get predictions for test data
-      lrModel.transform(test)
-        .select("label", "features", "prediction")
-        .show(5)
-
-      //print rmse of our model
-      val lrModelSummary = lrModel
-        .stages(6)
-        .asInstanceOf[LinearRegressionModel].summary
-      println(s"Mean Squared Error: ${lrModelSummary.meanSquaredError} " +
-        s"for parameters: maxIter[$maxIter], regParam[$regParam], elNet[$elNet]")
-    }
+    //print rmse of our model
+    val lrModelSummary = lrModel
+      .stages(5)
+      .asInstanceOf[LinearRegressionModel].summary
+    println(s"RMSE: ${lrModelSummary.rootMeanSquaredError} " +
+      s"for parameters: maxIter[$maxIter], regParam[$regParam], elNet[$elNet]")
 
   }
 }

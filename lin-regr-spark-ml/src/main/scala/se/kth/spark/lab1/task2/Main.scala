@@ -21,7 +21,7 @@ object Main {
 
     import spark.implicits._
 
-    val filePath = "src/main/resources/millionsong.txt"
+    val filePath = "src/main/resources/million-song.txt"
     val songsDf = spark.sparkContext.textFile(filePath)
       .toDF("record")
     songsDf.show(5)

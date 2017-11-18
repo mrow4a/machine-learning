@@ -20,7 +20,7 @@ object Main {
 
     import spark.implicits._
 
-    val filePath = "src/main/resources/millionsong.txt"
+    val filePath = "src/main/resources/million-song.txt"
     val rdd = spark.sparkContext.textFile(filePath)
 
     //Step1: print the first 5 rows, what is the delimiter, number of features and the data types?
