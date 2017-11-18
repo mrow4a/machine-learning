@@ -17,6 +17,7 @@
 
 package mrow4a.spark.java;
 
+import mrow4a.spark.java.alg.AssocRules;
 import mrow4a.spark.java.alg.Baskets;
 import mrow4a.spark.java.alg.AprioriFreqItemSets;
 import org.apache.spark.api.java.JavaPairRDD;
@@ -34,9 +35,8 @@ public final class FreqItemSetsJob {
 
     public static void main(String[] args) throws Exception {
         SparkConf conf = new SparkConf()
-                .setAppName("JavaPrefixSpanExample")
-                .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-                .setMaster("local[*]").set("spark.executor.memory", "1g");
+                .setAppName("FreqItemSetsJob")
+                .setMaster("local[*]");
         SparkSession spark = SparkSession
                 .builder()
                 .config(conf)
@@ -67,14 +67,31 @@ public final class FreqItemSetsJob {
          */
         double supportThreshold = 0.01;
         JavaPairRDD<List<String>, Integer> frequentItemSets = AprioriFreqItemSets
-                .get(baskets, supportThreshold);
+                .get(baskets, supportThreshold).cache();
 
+        /*
+         * Set confidence threshold to 0.5 (50%) and obtain association rules
+         */
+        double confidenceThreshold = 0.5;
+        JavaPairRDD<Tuple2<List<String>, List<String>>, Double> associationRules = AssocRules
+                .get(frequentItemSets, confidenceThreshold);
+
+        /*
+         * Print results
+         */
+        List<Tuple2<List<String>, Integer>> frequentItemSetsCollect = frequentItemSets.collect();
+        List<Tuple2<Tuple2<List<String>, List<String>>, Double>> associationRulesCollect = associationRules.collect();
         Instant end = Instant.now();
 
-        System.out.println();
-        for (Tuple2<List<String>, Integer> tuple : frequentItemSets.collect()) {
+        System.out.println("Frequent Itemsets: ");
+        for (Tuple2<List<String>, Integer> tuple : frequentItemSetsCollect) {
             System.out.println(tuple._1() + ": " + tuple._2().toString());
-            //System.out.println(tuple);
+        }
+        System.out.println();
+
+        System.out.println("Association rules detected: ");
+        for (Tuple2<Tuple2<List<String>, List<String>>, Double> tuple : associationRulesCollect) {
+            System.out.println(tuple._1._1 + " -> " + tuple._1._2 + " with confidence " + tuple._2.toString());
         }
         System.out.println();
 

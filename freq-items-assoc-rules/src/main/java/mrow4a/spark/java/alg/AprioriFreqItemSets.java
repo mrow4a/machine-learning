@@ -26,53 +26,41 @@ public final class AprioriFreqItemSets {
         long basketsCount = baskets.count();
 
         /*
-         * Initialize broadcast
+         * Initialize broadcast of frequent itemsets hashset
          */
-        Broadcast<HashSet<String>> broadcast = jsc.broadcast(new HashSet<>());
-        boolean converged = false;
-        int stageNumber = 1;
-
+        Broadcast<HashSet<String>> freqItemsetsHashSetBroadcast = jsc.broadcast(new HashSet<>());
         JavaPairRDD<List<String>, Integer> frequentItems = jsc.parallelizePairs(new ArrayList<>());
-        while (!converged) {
-            int currentStage = stageNumber;
-            Broadcast<HashSet<String>> currentBroadcast = broadcast;
-            JavaPairRDD<List<String>, Integer> prunedCandidates = baskets
-                    .flatMap((FlatMapFunction<List<String>, List<String>>) items -> {
-                        // Get all possible combinations of items for this basket which have specific length
-                        List<List<String>> combinations = Combination
-                                .getSubArraysOfLength(items, currentStage);
 
-                        // Retrieve candidates from last stage
-                        HashSet<String> lastStagePrunedCandidates= currentBroadcast.value();
+        /*
+         * Initialize stages and loop. Loop until there are no more candidates to create new stage
+         */
+        boolean finished = false;
+        int stageNumber = 1;
+        while (!finished) {
+            int currentCombinationLength = stageNumber;
+            Broadcast<HashSet<String>> lastFreqItemsetsHashSetBroadcast = freqItemsetsHashSetBroadcast;
 
-                        // Contruct list of candidates
-                        List<List<String>> candidatesItems = new ArrayList<>();
-                        for(List<String> combination : combinations) {
-                            boolean isFrequent = true;
-                            if (currentStage != 1) {
-                                // In the first stage there are no subcombinations to check
-                                // In other stages, for a candidate to be a frequent itemset, all its subsets
-                                // must be frequent, thus check subcombinations
-                                List<List<String>> subCombinations = Combination
-                                        .getSubArraysOfLength(combination, currentStage - 1);
+            // Get candidates for current stage
+            JavaPairRDD<List<String>, Integer> currStageCandidates = baskets
+                    // In each of the baskets, execute the map function to get candidates of length <stageNumber>
+                    .flatMap((FlatMapFunction<List<String>, List<String>>) basket -> {
 
-                                // Check all subcombinations, if at least one of the is not frequent,
-                                // parent combination is not frequent
-                                for(List<String> subCombination : subCombinations) {
-                                    String serialSubCombination = subCombination.toString();
-                                    if (!lastStagePrunedCandidates.contains(serialSubCombination)) {
-                                        isFrequent = false;
-                                    }
-                                }
+                        // Retrieve candidates from last stage - using broadcasted hashset of frequent items
+                        HashSet<String> lastFreqItemsetsHashSet= lastFreqItemsetsHashSetBroadcast.value();
 
-                            }
+                        // Set valid subcombinations to frequent items and required combintion lenth to currentCombinationLength
+                        Combination combiner = new Combination(
+                                lastFreqItemsetsHashSet, // valid subcombinations
+                                currentCombinationLength // required combination length
+                        );
 
-                            if (isFrequent) {
-                                candidatesItems.add(combination);
-                            }
-                        }
+                        // Get all and valid possible combinations of items for this basket which have specific length
+                        // E.g. <a,b,c> -> <ab,ac,bc> for length 2
+                        // E.g. <a,b,c> -> <abc> for length 3
+                        List<List<String>> combinations = combiner
+                                .getSubArrays(basket);
 
-                        return candidatesItems.iterator();
+                        return combinations.iterator();
                     })
                     // Group the items and count number of its occurences
                     .mapToPair(s -> new Tuple2<>(s, 1))
@@ -81,24 +69,22 @@ public final class AprioriFreqItemSets {
                     .filter(itemCount -> filterBySupport(itemCount._2, basketsCount, supportThreshold))
                     .cache();
 
-            converged = prunedCandidates.isEmpty();
-            if (!converged) {
-                // Add pruned, frequent candidates to frequent items list
-                frequentItems = frequentItems
-                        .union(prunedCandidates);
+            // Add pruned, frequent candidates to frequent items list
+            frequentItems = frequentItems
+                    .union(currStageCandidates);
 
-                // Broadcast candidates from this stage to next stage
-                List<String> serializedFrequentItems = prunedCandidates
-                        .map(candidateCountPair -> candidateCountPair._1.toString())
-                        .collect();
-                broadcast = jsc.broadcast(new HashSet<>(serializedFrequentItems));
+            // Broadcast candidates from this stage to next stage
+            List<String> serializedFrequentItems = currStageCandidates
+                    .map(candidateCountPair -> candidateCountPair._1.toString())
+                    .collect();
+            freqItemsetsHashSetBroadcast = jsc.broadcast(new HashSet<>(serializedFrequentItems));
 
-                // Increase stage index
-                stageNumber++;
-            }
+            // Increase stage index
+            stageNumber++;
+
+            // If there are no more candidates, finish
+            finished = currStageCandidates.isEmpty();
         }
-
-
 
         return frequentItems;
     }

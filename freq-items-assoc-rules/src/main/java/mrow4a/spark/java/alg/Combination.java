@@ -2,23 +2,29 @@ package mrow4a.spark.java.alg;
 
 import scala.collection.mutable.ArrayBuffer;
 
-import java.util.Collection;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Vector;
+import java.util.*;
 
-public final class Combination {
+public class Combination {
 
-    public static List<List<String>> getSubArraysOfLength(List<String> input, long combinationLength) {
-        List<List<String>> combinations = get(input, input.size() - 1, combinationLength);
+    private HashSet<String> validSubCombinations;
+    private long requiredCombinationLength;
 
+    public Combination(HashSet<String> validSubCombinations, long requiredCombinationLength) {
+        this.validSubCombinations = validSubCombinations;
+        this.requiredCombinationLength = requiredCombinationLength;
+    }
+
+    public List<List<String>> getSubArrays(List<String> input) {
+        int lastElementIndex = input.size() - 1;
+        List<List<String>> combinations = get(input, lastElementIndex);
+
+        // Filter out only the ones which match the required combination length
         Vector<List<String>> filteredCombinations = new Vector<>();
-        int combinationsSize = combinations.size();
-
-        for (int i = 0; i < combinationsSize; i++) {
+        for (int i = 0; i < combinations.size(); i++) {
             List<String> currentCombination = combinations.get(i);
-            int currentCombinationSize = currentCombination.size();
-            if (currentCombinationSize == combinationLength) {
+
+            // Accept only the ones with required length
+            if (currentCombination.size() == this.requiredCombinationLength) {
                 filteredCombinations.add(currentCombination);
             }
         }
@@ -26,31 +32,40 @@ public final class Combination {
         return filteredCombinations;
     }
 
-    private static List<List<String>> get(List<String> input, int index, long combinationLength) {
-        if (index == -1) {
+    private List<List<String>> get(List<String> input, int elementIndex) {
+        if (elementIndex == -1) {
             return new Vector<>();
         }
 
-        String next = input.get(index);
-        List<List<String>> combinations = get(input, index - 1, combinationLength);
-        int combinationsSize = combinations.size();
+        String element = input.get(elementIndex);
 
-        for (int i = 0; i < combinationsSize; i++) {
-            List<String> currentCombination = combinations.get(i);
+        // Get combination for next element in input array
+        List<List<String>> nextElementCombinations = get(input, elementIndex - 1);
+        int nextElementCombinationsNumber = nextElementCombinations.size();
+
+        for (int i = 0; i < nextElementCombinationsNumber; i++) {
+            List<String> currentCombination = nextElementCombinations.get(i);
             int currentCombinationSize = currentCombination.size();
 
-            if (currentCombinationSize < combinationLength) {
-                List<String> newCombination = new ArrayList<>(currentCombination);
-                newCombination.add(next);
+            // If this subcombination is direct combination for required, check if this one is not excluded
+            if (currentCombinationSize == this.requiredCombinationLength - 1
+                    && !this.validSubCombinations.contains(currentCombination.toString()) ) {
+                continue;
+            }
 
-                combinations.add(newCombination);
+            // Accept only subcombinations (lower then requiredCombinationLength)
+            if (currentCombinationSize < this.requiredCombinationLength) {
+                // Extend this combination with the element
+                List<String> newCombination = new ArrayList<>(currentCombination);
+                newCombination.add(element);
+                nextElementCombinations.add(newCombination);
             }
         }
 
         List<String> newCombination = new ArrayList<>();
-        newCombination.add(next);
-        combinations.add(newCombination);
+        newCombination.add(element);
+        nextElementCombinations.add(newCombination);
 
-        return combinations;
+        return nextElementCombinations;
     }
 }
