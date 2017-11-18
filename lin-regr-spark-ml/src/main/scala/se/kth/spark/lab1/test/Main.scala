@@ -1,13 +1,10 @@
 package se.kth.spark.lab1.test
 
 import org.apache.spark._
-import org.apache.spark.ml.Pipeline
-import org.apache.spark.ml.feature.VectorAssembler
-import org.apache.spark.sql.{ Row, SQLContext, DataFrame }
-import org.apache.spark.ml.PipelineModel
-import org.apache.commons.io.IOUtils
+import org.apache.spark.sql.SQLContext
 import java.net.URL
-import java.nio.charset.Charset
+
+import org.apache.commons.io.IOUtils
 
 case class Bank(age: Integer, job: String, marital: String, education: String, balance: Integer)
 
@@ -20,9 +17,10 @@ object Main {
     import sqlContext.implicits._
     import sqlContext._
 
+    val url = new URL("https://s3.amazonaws.com/apache-zeppelin/tutorial/bank/bank.csv")
     val bankText = sc.parallelize(
       IOUtils.toString(
-        new URL("https://s3.amazonaws.com/apache-zeppelin/tutorial/bank/bank.csv"),
+        url.openStream(),
         "utf8").split("\n"))
 
     val bank = bankText.map(s => s.split(";")).filter(s => s(0) != "\"age\"").map(

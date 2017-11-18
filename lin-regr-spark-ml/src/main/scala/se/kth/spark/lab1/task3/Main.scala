@@ -12,8 +12,7 @@ import se.kth.spark.lab1.{Array2Vector, DoubleUDF, Vector2DoubleUDF}
 object Main {
   def main(args: Array[String]) {
     val conf = new SparkConf()
-      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-      .setMaster("local[*]").set("spark.executor.memory", "1g")
+      .setMaster("local[*]")
 
     val spark = SparkSession
       .builder()
@@ -23,8 +22,6 @@ object Main {
     import spark.implicits._
 
     val filePath = "src/main/resources/million-song.txt"
-
-    // Split data into training and testing
     val songsDf = spark.sparkContext.textFile(filePath)
       // Remove all " chars
       .map(record => record.replace("\"", ""))
@@ -52,6 +49,9 @@ object Main {
       .setIndices(Array(0))
     val v2d = new Vector2DoubleUDF(year => year.apply(0))
       .setInputCol("year_vector")
+      .setOutputCol("rawyear")
+    val lShifter = new DoubleUDF(vector => vector - 1922.0)
+      .setInputCol("rawyear")
       .setOutputCol("label")
 
     // Prepare features (pipeline)
@@ -79,6 +79,7 @@ object Main {
         arr2Vect,
         lSlicer,
         v2d,
+        lShifter,
         fSlicer,
         learningAlg))
 
@@ -92,7 +93,7 @@ object Main {
 
     //print rmse of our model
     val lrModelSummary = lrModel
-      .stages(5)
+      .stages(6)
       .asInstanceOf[LinearRegressionModel].summary
     println(s"RMSE: ${lrModelSummary.rootMeanSquaredError} " +
       s"for parameters: maxIter[$maxIter], regParam[$regParam], elNet[$elNet]")

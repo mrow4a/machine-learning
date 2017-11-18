@@ -18,15 +18,26 @@ case class Instance(label: Double, features: Vector)
 
 object Helper {
   def rmse(labelsAndPreds: RDD[(Double, Double)]): Double = {
-    ???
+    val n = labelsAndPreds.count()
+
+    val squareErrorSum = labelsAndPreds
+      .map( lp => Math.pow(lp._1 - lp._2, 2.0) ) // (label - prediction)^2
+      .sum() // sum of error^2
+
+    Math.sqrt(squareErrorSum / n) // sqrt ( sum(error^2) / n )
   }
 
   def predictOne(weights: Vector, features: Vector): Double = {
-    ???
+    VectorHelper.dot(weights, features)
   }
 
   def predict(weights: Vector, data: RDD[Instance]): RDD[(Double, Double)] = {
-    ???
+    data.map(instance =>
+      (
+        instance.label,
+        predictOne(weights, instance.features)
+      )
+    )
   }
 }
 
@@ -38,11 +49,15 @@ class MyLinearRegressionImpl(override val uid: String)
   override def copy(extra: ParamMap): MyLinearRegressionImpl = defaultCopy(extra)
 
   def gradientSummand(weights: Vector, lp: Instance): Vector = {
-    ???
+    val label = lp.label
+    val features = lp.features
+
+    VectorHelper.dot(features, Helper.predictOne(weights, features) - label)
   }
 
-  def gradient(d: RDD[Instance], weights: Vector): Vector = {
-    ???
+  def gradient(data: RDD[Instance], weights: Vector): Vector = {
+    data.map(instance => gradientSummand(weights, instance))
+      .reduce(VectorHelper.sum)
   }
 
   def linregGradientDescent(trainData: RDD[Instance], numIters: Int): (Vector, Array[Double]) = {

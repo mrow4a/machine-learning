@@ -7,13 +7,12 @@ import org.apache.spark.sql.{DataFrame, SQLContext, SparkSession}
 import org.apache.spark.ml.tuning.{CrossValidator, CrossValidatorModel, ParamGridBuilder}
 import org.apache.spark.ml.regression.{LinearRegression, LinearRegressionModel}
 import org.apache.spark.ml.{Pipeline, PipelineModel}
-import se.kth.spark.lab1.{Array2Vector, Vector2DoubleUDF}
+import se.kth.spark.lab1.{Array2Vector, DoubleUDF, Vector2DoubleUDF}
 
 object Main {
   def main(args: Array[String]) {
     val conf = new SparkConf()
-      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-      .setMaster("local[*]").set("spark.executor.memory", "1g")
+      .setMaster("local[*]")
 
     val spark = SparkSession
       .builder()
@@ -23,8 +22,6 @@ object Main {
     import spark.implicits._
 
     val filePath = "src/main/resources/million-song.txt"
-
-    // Split data into training and testing
     val songsDf = spark.sparkContext.textFile(filePath)
       // Remove all " chars
       .map(record => record.replace("\"", ""))
@@ -49,6 +46,9 @@ object Main {
       .setIndices(Array(0))
     val v2d = new Vector2DoubleUDF(year => year.apply(0))
       .setInputCol("year_vector")
+      .setOutputCol("rawyear")
+    val lShifter = new DoubleUDF(vector => vector - 1922.0)
+      .setInputCol("rawyear")
       .setOutputCol("label")
 
     // Prepare features (pipeline)
@@ -80,6 +80,7 @@ object Main {
         arr2Vect,
         lSlicer,
         v2d,
+        lShifter,
         fSlicer,
         polyExpansion,
         lrStage))
@@ -114,7 +115,7 @@ object Main {
       // Get best LinearRegression model
       .bestModel
       .asInstanceOf[PipelineModel]
-      .stages(6) // lrStage is 6th
+      .stages(7) // lrStage is 7th
       .asInstanceOf[LinearRegressionModel]
     println(s"RMSE: ${lrBestModel.summary.rootMeanSquaredError} " +
       s"for parameters: maxIter[${lrBestModel.getMaxIter}], regParam[${lrBestModel.getRegParam}], elNet[${lrBestModel.getElasticNetParam}]")
