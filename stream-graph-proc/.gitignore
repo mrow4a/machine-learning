@@ -1,0 +1,8 @@
+*.class
+*.log
+
+dist/*
+.idea/
+target/
+*.iml
+datasets/*

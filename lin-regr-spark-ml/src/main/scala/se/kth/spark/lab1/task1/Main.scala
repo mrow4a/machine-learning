@@ -10,8 +10,7 @@ import org.apache.spark.sql.SparkSession
 object Main {
   def main(args: Array[String]) {
     val conf = new SparkConf()
-      .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-      .setMaster("local[*]").set("spark.executor.memory", "1g")
+      .setMaster("local[*]")
 
     val spark = SparkSession
       .builder()
