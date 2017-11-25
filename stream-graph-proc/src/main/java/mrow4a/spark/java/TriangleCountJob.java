@@ -19,11 +19,13 @@ package mrow4a.spark.java;
 
 import mrow4a.spark.java.alg.Edge;
 import mrow4a.spark.java.alg.EdgeParser;
+import mrow4a.spark.java.alg.TriangleCount;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.streaming.Durations;
 import org.apache.spark.streaming.api.java.JavaDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
+import org.apache.spark.streaming.dstream.QueueInputDStream;
 import scala.Tuple2;
 
 import org.apache.spark.api.java.JavaRDD;
@@ -31,29 +33,42 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.SparkConf;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.LinkedList;
+import java.util.Queue;
+import org.apache.log4j.Logger;
+import org.apache.log4j.Level;
+
 
 public final class TriangleCountJob {
 
     public static void main(String[] args) throws Exception {
-        SparkConf conf = new SparkConf()
-                .setAppName("StreamGraphProc")
-                .setMaster("local[*]");
-        JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.seconds(5));
-
         // /home/mrow4a/Projects/machine-learning/stream-graph-proc/datasets/run
-        if (args.length < 1) {
+        if (args.length < 2) {
             System.err.println();
-            System.err.println("Usage: StreamGraphProc <file>");
+            System.err.println("Usage: StreamGraphProc <file> <checkpointdir>");
             System.err.println();
             System.exit(1);
         }
 
+        Logger.getLogger("org").setLevel(Level.OFF);
+        Logger.getLogger("akka").setLevel(Level.OFF);
+
+        SparkConf conf = new SparkConf()
+                .setAppName("StreamGraphProc")
+                .setMaster("local[*]");
+        JavaStreamingContext jssc = new JavaStreamingContext(conf, Durations.seconds(5));
+        jssc.checkpoint(args[1]);
+
+        // Mock stream
+        JavaRDD<String> rdd = jssc.sparkContext().textFile(args[0]);
+        Queue<JavaRDD<String>> rddQueue = new LinkedList<>();
+        rddQueue.add(rdd);
+
+        // Process triangle count
         Instant start = Instant.now();
-
-        JavaDStream<String> lines = jssc.textFileStream(args[0]);
-
+        JavaDStream<String> lines = jssc.queueStream(rddQueue);
         JavaDStream<Edge> edges = EdgeParser.parse(lines);
-        edges.print();
+        TriangleCount.process(edges, 1000000);
 
 //        System.out.println();
 //

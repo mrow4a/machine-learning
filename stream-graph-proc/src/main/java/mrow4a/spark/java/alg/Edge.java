@@ -3,12 +3,12 @@ package mrow4a.spark.java.alg;
 import java.io.Serializable;
 
 public class Edge implements Serializable {
-    public Integer left;
-    public Integer right;
+    public Vertex left;
+    public Vertex right;
 
     Edge(Integer left, Integer right) {
-        this.left = left;
-        this.right = right;
+        this.left = new Vertex(left);
+        this.right = new Vertex(right);
     }
 
 
