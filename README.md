@@ -1,13 +1,17 @@
 # Data Mining, Scalable Machine Learning and Deep Learning projects
+- Piotr Mrowczynski
+- Jin Hu
 - Riccardo Sibani 
 - Filippo Boiani
-- Piotr Mrowczynski
 
-## Data mining
+## Contents
 
-### Wordcount
-
-Use it as template for other apps
+- Finding similar items
+- Frequent Items assoc rules
+- Spark Streaming Triangle Counting and Reservoi Sampling
+- Linear and Logistic Regression Spark ML
+- Neural Networks Tensorflow on Spark
+- Decision Trees
 
 ### Finding similar items
 
@@ -30,6 +34,109 @@ Running MinHash version:
 ```
 ./finding-similar-docs/run.sh FindingSimilarDocsMinHashJob 
 ```
+
+Results
+```
+Time: 3283 milliseconds
+Found similar document pairs [5/4950] with similarity threshold [0.2] and shingle lenght [5] and
+signature lenght [10]
+
+Time: 18397 milliseconds
+Found similar document pairs [422/1997001] with similarity threshold [0.2] and shingle lenght [5]
+and signature lenght [10]
+```
+
+### Frequent Items assoc rules
+
+Discovering association rules between itemsets in a sales transaction database (a set of baskets),
+done by two steps: Finding frequent itemsets with support at least s, Generating association rules
+with confidence at least c from the itemsets found in the first step.
+
+Building (Docker required for maven single assembly)
+```
+chmod +x freq-items-assoc-rules/build.sh
+chmod +x freq-items-assoc-rules/run.sh
+freq-items-assoc-rules/build.sh
+```
+
+Running freq items detection and association generation
+```
+freq-items-assoc-rules/run.sh
+```
+
+Results
+```
+Time: 20749 milliseconds
+Dataset: 100000 baskets of items
+Association rules detected:
+[704] -> [39] with confidence 0.617056856187291
+[704] -> [825] with confidence 0.6142697881828316
+[39, 704] -> [825] with confidence 0.9349593495934959
+[704, 825] -> [39] with confidence 0.9392014519056261
+[227] -> [390] with confidence 0.577007700770077
+[39, 825] -> [704] with confidence 0.8719460825610783
+Frequent Itemsets:
+[39, 704, 825]: 1035
+[227, 390]: 1049
+[789, 829]: 1194
+[39, 704]: 1107
+[368, 682]: 1193
+[217, 346]: 1336
+[390, 722]: 1042
+[39, 825]: 1187
+[368, 829]: 1194
+[704, 825]: 1102
+[72]: 2852
+[322]: 1154
+....
+```
+
+### Spark Streaming Triangle Counting and Reservoi Sampling
+
+Discovering association rules between itemsets in a sales transaction database (a set of baskets),
+done by two steps: Finding frequent itemsets with support at least s, Generating association rules
+with confidence at least c from the itemsets found in the first step.
+
+Building (Docker required for maven single assembly)
+```
+chmod +x stream-graph-proc/build.sh
+chmod +x stream-graph-proc/run.sh
+stream-graph-proc/build.sh
+```
+
+Running
+```
+stream-graph-proc/run.sh
+```
+
+Results 
+```
+Dataset: 16,000,000 edges
+Triangle count exact: 7,515,023
+
+Results:
+
+Memory limit: 2,000,000 edges
+Current triangle count estimate: 7,594,782 at t=16,518,947
+
+Memory limit: 1,000,000 edges
+Current triangle count estimate: 7,626,910 at t=16,518,947
+
+Memory limit: 100,000 edges
+Current triangle count estimate: 9,015,504 at t=16,518,947
+```
+
+### Linear Regression on Spark ML
+
+Pipeline descriptions and explanations in the code
+
+### Neural Networks Tensorflow
+
+TODO
+
+### Wordcount
+
+Use it as template for other apps
 
 ## Decision trees
 
