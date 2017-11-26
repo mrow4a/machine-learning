@@ -132,7 +132,14 @@ Pipeline descriptions and explanations in the code
 
 ### Neural Networks Tensorflow
 
-TODO
+```
+chmod +x neur-net-tensorflow/run.sh 
+```
+
+Running basic version:
+```
+./neur-net-tensorflow/run.sh 
+```
 
 ### Wordcount
 
