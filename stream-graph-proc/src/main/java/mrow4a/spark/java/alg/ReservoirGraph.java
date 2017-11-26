@@ -54,14 +54,6 @@ public class ReservoirGraph implements Serializable {
         return evictedEdge;
     }
 
-    public Long getSeenEdges() {
-        return this.seenEdges;
-    }
-
-    public Integer getMaxEdges() {
-        return this.numEdges;
-    }
-
     /**
      * Get shared neighborhood
      *
@@ -126,7 +118,6 @@ public class ReservoirGraph implements Serializable {
             return new HashSet<>();
         }
     }
-
 
     void print() {
         System.out.println();

@@ -20,6 +20,7 @@ package mrow4a.spark.java;
 import mrow4a.spark.java.alg.Edge;
 import mrow4a.spark.java.alg.EdgeParser;
 import mrow4a.spark.java.alg.TriangleCount;
+import mrow4a.spark.java.alg.TriestState;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.streaming.Durations;
@@ -63,20 +64,22 @@ public final class TriangleCountJob {
         JavaRDD<String> rdd = jssc.sparkContext().textFile(args[0]);
         Queue<JavaRDD<String>> rddQueue = new LinkedList<>();
         rddQueue.add(rdd);
+        JavaDStream<String> lines = jssc.queueStream(rddQueue);
 
         // Process triangle count
         Instant start = Instant.now();
-        JavaDStream<String> lines = jssc.queueStream(rddQueue);
         JavaDStream<Edge> edges = EdgeParser.parse(lines);
-        TriangleCount.process(edges, 1000000);
 
-//        System.out.println();
-//
-//        System.out.println("Association rules detected: ");
-//        for (Tuple2<Tuple2<List<String>, List<String>>, Double> tuple : associationRulesCollect) {
-//            System.out.println(tuple._1._1 + " -> " + tuple._1._2 + " with confidence " + tuple._2.toString());
-//        }
-//        System.out.println();
+        Integer memoryLimit = 100000;
+        JavaDStream<TriestState> triangleCounts = TriangleCount.process(edges, memoryLimit);
+
+        triangleCounts.foreachRDD(count -> {
+            Integer size = count.collect().size();
+            if (size > 0) {
+                TriestState lastState = count.collect().get(size - 1);
+                System.out.println("Current triangle count estimate: " + lastState.getTriangleCount() + " at t=" + lastState.getSeenEdges());
+            }
+        });
 
         jssc.start();
         jssc.awaitTermination();
