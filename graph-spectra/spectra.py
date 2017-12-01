@@ -6,8 +6,7 @@ import getopt
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.sparse import csgraph
-from numpy import linalg as LA
+from numpy.linalg import eig
 from sklearn.cluster import KMeans
 
 def print_help():
@@ -17,11 +16,30 @@ def print_help():
 def print_edges(edges):
     # Convert to full matrix
     n = max(max(left, right) for left, right, weight in edges)  # Get size of matrix
-    matrix = [[0] * n for i in range(n)]
+    matrix = [[-1] * n for i in range(n)]
     for left, right, weight in edges:
         matrix[left - 1][right - 1] = weight  # Convert to 0-based index.
 
     A = np.matrix(matrix)
+    plt.matshow(A)
+    plt.show()
+
+def print_affinity(edges):
+    n = len(edges)
+    affinity_matrix = [[0] * n for i in range(n)]
+    for i in range(0, n):
+        # Create affinity matrix
+        for j in range(0, n):
+            affinity = 0
+            if i != j:
+                pointI= edges[i]
+                pointJ = edges[j]
+                dist = np.sqrt(np.power((pointI[0] - pointJ[0]), 2) + np.power((pointI[1] - pointJ[1]), 2))
+                sigma = 1
+                affinity = np.exp(-1 * np.power(dist, 2) / (2*np.power(sigma, 2)))
+
+            affinity_matrix[i][j] = affinity
+    A = np.matrix(affinity_matrix)
     plt.matshow(A)
     plt.show()
 
@@ -42,55 +60,72 @@ def main(argv):
     with open(path, 'r') as f:
         edges = [map(int, row) for row in csv.reader(f, delimiter=',')]
 
+    import networkx as nx
+    G = nx.Graph()
+
     # Sanitize data
     for i in range(0, len(edges)):
-        if len(edges[i]) != 2 and len(edges[i]) != 3:
+        if len(edges[i]) < 2:
             print "Wrong data format"
             exit(2)
-
         if len(edges[i]) == 2:
             edges[i].append(1)
 
-    # Print edges matrix
-    #print_edges(edges)
+        G.add_edge(edges[i][0], edges[i][1])
 
-    # Start spectral clustering - https://calculatedcontent.com/2012/10/09/spectral-clustering/
+    # matrix = nx.adjacency_matrix(G).todense()
+    # plt.matshow(matrix)
+    # plt.show()
 
-    # Calculate affinity matrix and diagonal
-    n = len(edges)
-    affinity_matrix = [[0] * n for i in range(n)]
-    for i in range(0, n):
-        # Create affinity matrix
-        for j in range(0, n):
-            affinity = 0
-            if i != j:
-                pointI= edges[i]
-                pointJ = edges[j]
-                dist = np.sqrt(np.power((pointI[0] - pointJ[0]), 2) + np.power((pointI[1] - pointJ[1]), 2))
-                sigma = 1
-                affinity = np.exp(-1 * np.power(dist, 2) / (2*np.power(sigma, 2)))
-
-            affinity_matrix[i][j] = affinity
+    # Get Laplacian from affinity matrix
+    # Get Eigenvectors in ascending order
+    laplacian = nx.laplacian_matrix(G).todense()
+    eigenvalues, eigenvectors = eig(laplacian)
+    idx = eigenvalues.argsort()
+    eigenvalues = eigenvalues[idx]
 
     # Get Normalized Laplacian from affinity matrix
-    laplacian = csgraph.laplacian(np.matrix(affinity_matrix), normed=True)
+    # Get Eigenvectors in descending order (the normalized (unit length) eigenvectors)
+    norm_laplacian = nx.normalized_laplacian_matrix(G).todense()
+    norm_eigenvalues, norm_eigenvectors = eig(norm_laplacian)
+    idx = norm_eigenvalues.argsort()
+    norm_eigenvalues = norm_eigenvalues[idx]
+    norm_eigenvectors = norm_eigenvectors[:, idx]
 
-    # Get Eigenvectors in ascending order (the normalized (unit length) eigenvectors)
-    eigenvalues, norm_eigenvectors = LA.eigh(laplacian)
+    plt.plot(eigenvalues, 'ro')
+    plt.suptitle('Not-normed eigenvalues')
+    plt.show()
+    plt.plot(eigenvalues[0:16], 'ro')
+    plt.suptitle('Not-normed first 20 eigenvalues')
+    plt.show()
+    plt.plot(norm_eigenvalues, 'ro')
+    plt.suptitle('Normed eigenvalues')
+    for i in range(0, number_of_clusters):
+        plt.plot(norm_eigenvectors[:,i])
+    plt.suptitle('Normed Largest Eigenvectors')
+    plt.show()
 
     # Get k largest eigenvectors by its eigenvalues
-    kth_largest_eigenvectors = norm_eigenvectors[len(norm_eigenvectors)-number_of_clusters-1:len(norm_eigenvectors)-1]
-
-    eigenvector_points = [[0] * 4 for i in range(n)]
-    for k in range(0, len(kth_largest_eigenvectors)):
-        eigenvector = kth_largest_eigenvectors[k]
+    n = len(eigenvalues)
+    eigenvector_points = [[0] * number_of_clusters for i in range(n)]
+    for k in range(0, number_of_clusters):
+        eigenvector = norm_eigenvectors[:,k].tolist()
         for i in range(0, len(eigenvector)):
-            eigenvector_points[i][k] = eigenvector[i]
+            real_imaginary_parts = eigenvector[i]
+            real_part = real_imaginary_parts[0]
+            eigenvector_points[i][k] = real_part
 
-    kmeans_model_labels = KMeans(n_clusters=number_of_clusters).fit(eigenvector_points).labels_
+    kmeans_model_labels = KMeans(n_clusters=number_of_clusters).fit_predict(eigenvector_points)
 
-    for i in range(0, len(kmeans_model_labels)):
-        edges[i][2] = kmeans_model_labels[i]
+    for i in range(0, len(edges)):
+        v1 = edges[i][0]
+        v2 = edges[i][1]
+        v1cluster = kmeans_model_labels[v1-1]
+        v2cluster = kmeans_model_labels[v2-1]
+        if (v1cluster == v2cluster):
+            edges[i][2] = v1cluster
+
+    print kmeans_model_labels
 
     print_edges(edges)
 
