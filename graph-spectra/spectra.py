@@ -110,10 +110,14 @@ def main(argv):
     eigenvector_points = [[0] * number_of_clusters for i in range(n)]
     for k in range(0, number_of_clusters):
         eigenvector = norm_eigenvectors[:,k].tolist()
+        eigvect = []
         for i in range(0, len(eigenvector)):
             real_imaginary_parts = eigenvector[i]
             real_part = real_imaginary_parts[0]
             eigenvector_points[i][k] = real_part
+            eigvect.append(real_part)
+        if (k == 1):
+            plt.plot(np.sort(eigvect), 'ro')
 
     kmeans_model_labels = KMeans(n_clusters=number_of_clusters).fit_predict(eigenvector_points)
 
